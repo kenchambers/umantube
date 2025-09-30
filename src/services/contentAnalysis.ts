@@ -1,4 +1,4 @@
-import { YouTubeVideo } from '../types/youtube';
+import { YouTubeVideo } from "../types/youtube";
 
 export interface ContentScore {
   score: number;
@@ -60,6 +60,7 @@ export interface CreatorEngagementData {
   creatorReplies: number;
   engagementRatio: number;
   hasEngagement: boolean;
+  genericCommentRatio?: number;
 }
 
 // Advanced synthetic content detection patterns
@@ -71,6 +72,24 @@ const SYNTHETIC_PATTERNS = [
   /\b(text to speech|tts|voice synthesis|neural|auto-generated)\b/i,
   /\b(virtual influencer|digital human|synthetic media|deepvoice)\b/i,
 ];
+
+// Lightweight prefilter to quickly flag likely AI/synthetic content using only snippet fields
+export const quickAISyntheticFlag = (video: YouTubeVideo): boolean => {
+  const { title, description, tags } = video.snippet;
+  const text = `${title || ""} ${description || ""}`.toLowerCase();
+  if (SYNTHETIC_PATTERNS.some((pattern) => pattern.test(text))) {
+    return true;
+  }
+  if (Array.isArray(tags) && tags.length > 0) {
+    const lowerTags = tags.map((t) => (t || "").toLowerCase());
+    for (const tag of lowerTags) {
+      if (SYNTHETIC_PATTERNS.some((pattern) => pattern.test(tag))) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
 
 // Generic title patterns that suggest automated content
 const GENERIC_TITLE_PATTERNS = [
@@ -103,20 +122,37 @@ const GENERIC_COMMENT_PATTERNS = [
   /^(space|science|nature|music|video) is (so )?(cool|amazing|awesome|great)!*$/i,
 ];
 
+export interface EngagementRatios {
+  likeRatio: number;
+  commentRatio: number;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+}
+
 // Calculate engagement ratios
-export const calculateEngagementRatios = (statistics: any) => {
-  const viewCount = parseInt(statistics.viewCount || '0');
-  const likeCount = parseInt(statistics.likeCount || '0');
-  const commentCount = parseInt(statistics.commentCount || '0');
-  
-  if (viewCount === 0) return { likeRatio: 0, commentRatio: 0 };
-  
+export const calculateEngagementRatios = (
+  statistics: any
+): EngagementRatios => {
+  const viewCount = parseInt(statistics.viewCount || "0");
+  const likeCount = parseInt(statistics.likeCount || "0");
+  const commentCount = parseInt(statistics.commentCount || "0");
+
+  if (viewCount === 0)
+    return {
+      likeRatio: 0,
+      commentRatio: 0,
+      viewCount,
+      likeCount,
+      commentCount,
+    };
+
   return {
     likeRatio: likeCount / viewCount,
     commentRatio: commentCount / viewCount,
     viewCount,
     likeCount,
-    commentCount
+    commentCount,
   };
 };
 
@@ -131,16 +167,16 @@ export const analyzeCreatorEngagement = (
 
   for (const thread of commentThreads) {
     totalTopComments++;
-    
+
     // Check if the comment looks generic/bot-like
     const commentText = thread.snippet.topLevelComment.snippet.textDisplay;
-    const isGeneric = GENERIC_COMMENT_PATTERNS.some(pattern => 
+    const isGeneric = GENERIC_COMMENT_PATTERNS.some((pattern) =>
       pattern.test(commentText.trim())
     );
     if (isGeneric) {
       genericComments++;
     }
-    
+
     // Check replies for creator engagement
     if (thread.replies?.comments) {
       for (const reply of thread.replies.comments) {
@@ -152,50 +188,54 @@ export const analyzeCreatorEngagement = (
       }
     }
   }
-  
-  const engagementRatio = totalTopComments > 0 ? creatorReplies / totalTopComments : 0;
-  const genericRatio = totalTopComments > 0 ? genericComments / totalTopComments : 0;
-  
+
+  const engagementRatio =
+    totalTopComments > 0 ? creatorReplies / totalTopComments : 0;
+  const genericRatio =
+    totalTopComments > 0 ? genericComments / totalTopComments : 0;
+
   return {
     totalTopComments,
     creatorReplies,
     engagementRatio,
     hasEngagement: engagementRatio > 0.05, // At least 5% engagement
-    genericCommentRatio: genericRatio
+    genericCommentRatio: genericRatio,
   };
 };
 
 // Analyze video-level signals
-export const analyzeVideoContent = (video: YouTubeVideo): { score: number; reasons: string[] } => {
+export const analyzeVideoContent = (
+  video: YouTubeVideo
+): { score: number; reasons: string[] } => {
   let score = 0;
   const reasons: string[] = [];
-  
+
   const { title, description, tags } = video.snippet;
   const statistics = video.statistics;
-  
+
   // Check for synthetic content keywords
   const fullText = `${title} ${description}`.toLowerCase();
   for (const pattern of SYNTHETIC_PATTERNS) {
     if (pattern.test(fullText)) {
       score -= 5; // Reduced penalty
-      reasons.push('Contains AI/synthetic content indicators');
+      reasons.push("Contains AI/synthetic content indicators");
       break;
     }
   }
-  
+
   // Check for generic title patterns
   for (const pattern of GENERIC_TITLE_PATTERNS) {
     if (pattern.test(title)) {
       score -= 2; // Reduced penalty
-      reasons.push('Generic/templated title pattern');
+      reasons.push("Generic/templated title pattern");
       break;
     }
   }
-  
+
   // Analyze description quality
   if (!description || description.trim().length < 50) {
     score -= 1; // Reduced penalty
-    reasons.push('Very short or missing description');
+    reasons.push("Very short or missing description");
   } else {
     // Check for spammy description content
     let spamCount = 0;
@@ -207,139 +247,166 @@ export const analyzeVideoContent = (video: YouTubeVideo): { score: number; reaso
     }
     if (spamCount > 3) {
       score -= 2; // Reduced penalty
-      reasons.push('Spammy description with excessive promotional content');
+      reasons.push("Spammy description with excessive promotional content");
     }
   }
-  
+
   // Analyze tags (if available)
   if (tags) {
     if (tags.length > 20) {
       score -= 2;
-      reasons.push('Excessive number of tags (likely keyword stuffing)');
-    } else if (tags.length === 0 && statistics?.viewCount && parseInt(statistics.viewCount) > 10000) {
+      reasons.push("Excessive number of tags (likely keyword stuffing)");
+    } else if (
+      tags.length === 0 &&
+      statistics?.viewCount &&
+      parseInt(statistics.viewCount) > 10000
+    ) {
       score -= 1;
-      reasons.push('No tags on high-view video (suspicious)');
+      reasons.push("No tags on high-view video (suspicious)");
     }
   }
-  
+
   // Analyze engagement ratios
   if (statistics) {
     const ratios = calculateEngagementRatios(statistics);
-    
+
     // Check for disabled comments (major red flag)
     if (ratios.viewCount > 1000 && ratios.commentCount === 0) {
       score -= 5;
-      reasons.push('Comments appear to be disabled on popular video');
+      reasons.push("Comments appear to be disabled on popular video");
     }
-    
+
     // Check for abnormally low engagement
     if (ratios.viewCount > 10000) {
-      if (ratios.likeRatio < 0.001) { // Less than 0.1% like rate
+      if (ratios.likeRatio < 0.001) {
+        // Less than 0.1% like rate
         score -= 3;
-        reasons.push('Abnormally low like-to-view ratio');
+        reasons.push("Abnormally low like-to-view ratio");
       }
-      if (ratios.commentRatio < 0.0001) { // Less than 0.01% comment rate
+      if (ratios.commentRatio < 0.0001) {
+        // Less than 0.01% comment rate
         score -= 2;
-        reasons.push('Abnormally low comment-to-view ratio');
+        reasons.push("Abnormally low comment-to-view ratio");
       }
     }
   }
-  
+
   // Check title for random character strings
   if (/[A-Z0-9]{8,}/.test(title) || /\b\w{15,}\b/.test(title)) {
     score -= 2;
-    reasons.push('Title contains suspicious character patterns');
+    reasons.push("Title contains suspicious character patterns");
   }
-  
+
   return { score, reasons };
 };
 
 // Analyze channel-level signals
 export const analyzeChannelContent = (
-  channel: ChannelData, 
+  channel: ChannelData,
   recentVideos: YouTubeVideo[] = [],
   creatorEngagement?: CreatorEngagementData
 ): { score: number; reasons: string[] } => {
   let score = 0;
   const reasons: string[] = [];
-  
+
   const { snippet, statistics } = channel;
-  const channelAge = new Date().getTime() - new Date(snippet.publishedAt).getTime();
+  const channelAge =
+    new Date().getTime() - new Date(snippet.publishedAt).getTime();
   const channelAgeDays = channelAge / (1000 * 60 * 60 * 24);
-  const videoCount = parseInt(statistics.videoCount || '0');
-  
+  const videoCount = parseInt(statistics.videoCount || "0");
+
   // Check upload velocity (major red flag)
   if (channelAgeDays < 30 && videoCount > 100) {
     score -= 10;
-    reasons.push(`Channel is ${Math.round(channelAgeDays)} days old with ${videoCount} videos (likely automated)`);
+    reasons.push(
+      `Channel is ${Math.round(
+        channelAgeDays
+      )} days old with ${videoCount} videos (likely automated)`
+    );
   } else if (channelAgeDays < 90 && videoCount > 500) {
     score -= 8;
-    reasons.push(`Very high upload velocity: ${videoCount} videos in ${Math.round(channelAgeDays)} days`);
+    reasons.push(
+      `Very high upload velocity: ${videoCount} videos in ${Math.round(
+        channelAgeDays
+      )} days`
+    );
   } else if (videoCount > 0) {
     const videosPerDay = videoCount / Math.max(channelAgeDays, 1);
     if (videosPerDay > 5) {
       score -= 5;
-      reasons.push(`Extremely high upload rate: ${videosPerDay.toFixed(1)} videos per day`);
+      reasons.push(
+        `Extremely high upload rate: ${videosPerDay.toFixed(1)} videos per day`
+      );
     }
   }
-  
+
   // Check channel branding and description
   if (!snippet.description || snippet.description.trim().length < 100) {
     score -= 3;
-    reasons.push('Channel has minimal or no description');
+    reasons.push("Channel has minimal or no description");
   }
-  
+
   if (!snippet.thumbnails?.default?.url) {
     score -= 2;
-    reasons.push('Channel uses default avatar (no custom branding)');
+    reasons.push("Channel uses default avatar (no custom branding)");
   }
-  
+
   // Analyze recent video consistency (if provided)
   if (recentVideos.length >= 5) {
     const titleSimilarity = analyzeContentConsistency(recentVideos);
     if (titleSimilarity > 0.8) {
       score -= 4;
-      reasons.push('Recent videos show templated/repetitive patterns');
+      reasons.push("Recent videos show templated/repetitive patterns");
     }
   }
-  
+
   // Check subscriber-to-video ratio
-  const subscriberCount = parseInt(statistics.subscriberCount || '0');
+  const subscriberCount = parseInt(statistics.subscriberCount || "0");
   if (videoCount > 100 && subscriberCount < videoCount * 2) {
     score -= 2;
-    reasons.push('Low subscriber count relative to video output');
+    reasons.push("Low subscriber count relative to video output");
   }
-  
+
   // Ghost in the Comments test
   if (creatorEngagement) {
     if (creatorEngagement.totalTopComments >= 20) {
       if (creatorEngagement.engagementRatio === 0) {
         score -= 6;
-        reasons.push(`ZERO_CREATOR_ENGAGEMENT: No replies from creator in ${creatorEngagement.totalTopComments} top comments`);
+        reasons.push(
+          `ZERO_CREATOR_ENGAGEMENT: No replies from creator in ${creatorEngagement.totalTopComments} top comments`
+        );
       } else if (creatorEngagement.engagementRatio < 0.02) {
         score -= 3;
-        reasons.push(`Very low creator engagement: ${(creatorEngagement.engagementRatio * 100).toFixed(1)}% reply rate`);
+        reasons.push(
+          `Very low creator engagement: ${(
+            creatorEngagement.engagementRatio * 100
+          ).toFixed(1)}% reply rate`
+        );
       }
-      
+
       // Check for excessive generic comments (bot activity)
-      if (creatorEngagement.genericCommentRatio > 0.6) {
+      if ((creatorEngagement.genericCommentRatio ?? 0) > 0.6) {
         score -= 2;
-        reasons.push(`High ratio of generic/bot-like comments: ${(creatorEngagement.genericCommentRatio * 100).toFixed(1)}%`);
+        reasons.push(
+          `High ratio of generic/bot-like comments: ${(
+            (creatorEngagement.genericCommentRatio ?? 0) * 100
+          ).toFixed(1)}%`
+        );
       }
     }
   }
-  
+
   return { score, reasons };
 };
 
 // Analyze content consistency patterns
 const analyzeContentConsistency = (videos: YouTubeVideo[]): number => {
   if (videos.length < 3) return 0;
-  
-  const titles = videos.map(v => v.snippet.title.toLowerCase());
+
+  const titles = videos.map((v) => v.snippet.title.toLowerCase());
   let similarityScore = 0;
   let comparisons = 0;
-  
+
   // Check for common patterns in titles
   for (let i = 0; i < titles.length - 1; i++) {
     for (let j = i + 1; j < titles.length; j++) {
@@ -348,47 +415,54 @@ const analyzeContentConsistency = (videos: YouTubeVideo[]): number => {
       comparisons++;
     }
   }
-  
+
   return comparisons > 0 ? similarityScore / comparisons : 0;
 };
 
 // Simple string similarity calculation
 const calculateStringSimilarity = (str1: string, str2: string): number => {
-  const words1 = str1.split(' ');
-  const words2 = str2.split(' ');
-  const commonWords = words1.filter(word => words2.includes(word));
-  
+  const words1 = str1.split(" ");
+  const words2 = str2.split(" ");
+  const commonWords = words1.filter((word) => words2.includes(word));
+
   return commonWords.length / Math.max(words1.length, words2.length);
 };
 
 // Main content scoring function
 export const scoreContent = (
-  video: YouTubeVideo, 
-  channel?: ChannelData, 
+  video: YouTubeVideo,
+  channel?: ChannelData,
   recentVideos?: YouTubeVideo[],
   creatorEngagement?: CreatorEngagementData
 ): ContentScore => {
   const videoAnalysis = analyzeVideoContent(video);
   let totalScore = videoAnalysis.score;
   let allReasons = [...videoAnalysis.reasons];
-  
+
   let channelScore = 0;
   if (channel) {
-    const channelAnalysis = analyzeChannelContent(channel, recentVideos, creatorEngagement);
+    const channelAnalysis = analyzeChannelContent(
+      channel,
+      recentVideos,
+      creatorEngagement
+    );
     channelScore = channelAnalysis.score;
     totalScore += channelScore;
     allReasons.push(...channelAnalysis.reasons);
   }
-  
+
   return {
     score: totalScore,
     reasons: allReasons,
     videoScore: videoAnalysis.score,
-    channelScore
+    channelScore,
   };
 };
 
 // Determine if content should be filtered out
-export const shouldFilterContent = (contentScore: ContentScore, threshold: number = -10): boolean => {
+export const shouldFilterContent = (
+  contentScore: ContentScore,
+  threshold: number = -10
+): boolean => {
   return contentScore.score < threshold;
 };
