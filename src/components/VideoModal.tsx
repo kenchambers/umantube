@@ -41,11 +41,13 @@ export const VideoModal: React.FC<VideoModalProps> = ({ video, isOpen, onClose }
         <div className="p-6">
           <div className="aspect-video mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
             <iframe
-              src={`https://www.youtube.com/embed/${video.id.videoId}?autoplay=1`}
+              src={`https://www.youtube-nocookie.com/embed/${video.id.videoId}?autoplay=0&rel=0&modestbranding=1&playsinline=1`}
               title={video.snippet.title}
-              className="w-full h-full"
+              className="w-full h-full border-0"
               allowFullScreen
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              sandbox="allow-scripts allow-same-origin allow-presentation"
             />
           </div>
           
