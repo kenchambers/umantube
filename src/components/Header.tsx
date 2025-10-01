@@ -32,9 +32,9 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, theme, onThemeToggle }
       <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-shrink-0">
             <HumanYouTubeLogo />
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                 YouTube <span className="text-red-600">minus AI Slop</span>
               </h1>
@@ -51,9 +51,17 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, theme, onThemeToggle }
                 </button>
               </div>
             </div>
+            {/* Mobile-only help button */}
+            <button
+              onClick={() => setShowAlgorithmInfo(true)}
+              className="sm:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1"
+              title="How our filtering works"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex-1 max-w-2xl mx-8">
+          <form onSubmit={handleSubmit} className="flex-1 max-w-2xl mx-2 sm:mx-8">
             <div className="relative">
               <input
                 type="text"
@@ -74,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, theme, onThemeToggle }
 
           <button
             onClick={onThemeToggle}
-            className="p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="flex-shrink-0 p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
