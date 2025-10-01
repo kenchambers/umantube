@@ -416,7 +416,7 @@ export const searchVideos = async (
       type: filters.type === "any" ? "video" : filters.type,
       order: filters.sortBy,
       fields:
-        "items(id.videoId,snippet(title,description,channelId,channelTitle,publishedAt,thumbnails.medium,thumbnails.high,tags)),nextPageToken,prevPageToken,pageInfo",
+        "items(id.videoId,snippet(title,description,channelId,channelTitle,publishedAt,thumbnails.medium,thumbnails.high)),nextPageToken,prevPageToken,pageInfo",
       key: API_KEY,
     });
 
