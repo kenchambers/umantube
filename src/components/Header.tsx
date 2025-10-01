@@ -205,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, theme, onThemeToggle }
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <a
-                    href="https://github.com/yourusername/umantube"
+                    href="https://github.com/kenchambers/umantube"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
@@ -216,7 +216,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, theme, onThemeToggle }
                     View on GitHub
                   </a>
                   <a
-                    href="https://github.com/yourusername/umantube/issues"
+                    href="https://github.com/kenchambers/umantube/issues"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-green-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium"
