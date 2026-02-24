@@ -19,11 +19,10 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, theme, onThemeToggle }
   };
 
   const HumanYouTubeLogo = () => (
-    <div className="relative">
-      <div className="w-8 h-8 bg-red-600 rounded-sm flex items-center justify-center">
-        <div className="w-0 h-0 border-l-[6px] border-l-white border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent ml-1"></div>
+    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+      <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
+        <div className="w-2 h-2 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full"></div>
       </div>
-      <User className="w-4 h-4 text-red-600 absolute -bottom-1 -right-1 bg-white rounded-full p-0.5" />
     </div>
   );
 
@@ -35,13 +34,9 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, theme, onThemeToggle }
           <div className="flex items-center space-x-3 flex-shrink-0">
             <HumanYouTubeLogo />
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                YouTube <span className="text-red-600">minus AI Slop</span>
-              </h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">RealCast</h1>
               <div className="flex items-center gap-1">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  What YouTube used to be
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">A youtube filter for ai slop</p>
                 <button
                   onClick={() => setShowAlgorithmInfo(true)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
