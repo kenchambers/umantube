@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, theme, onThemeToggle }
           <div className="flex items-center space-x-3 flex-shrink-0">
             <HumanYouTubeLogo />
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">RealCast</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">umantube.com</h1>
               <div className="flex items-center gap-1">
                 <p className="text-xs text-gray-500 dark:text-gray-400">A youtube filter for ai slop</p>
                 <button
